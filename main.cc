@@ -24,6 +24,7 @@ namespace {
 bool crc_tab16_init = false;
 uint16_t crc_tab16[256];
 u_char read_cmd[8] = {0x01, 0x03, 0x00, 0x01, 0x00, 0x02, 0x95, 0xCB};
+// u_char read_cmd[8] = {0x01, 0x03, 0x00, 0x01, 0x00, 0x02, 0x95, 0xCB};
 
 void init_crc16_table() {
 
@@ -105,7 +106,7 @@ int main(void) {
 
   // set timeout to 0.1 seconds
   options.c_cc[VMIN] = 8;
-  options.c_cc[VTIME] = 10;
+  options.c_cc[VTIME] = 100;
 
   // set baud rate 9600, 8N1
   cfsetispeed(&options, B9600);
@@ -134,7 +135,9 @@ int main(void) {
     let crc_lo = crc >> 8;
     let crc_hi = crc & 0xFF;
     if (crc_hi != response[n_rd - 2] || crc_lo != response[n_rd - 1]) {
-      std::cout << "CRC error" << std::endl;
+
+      printf("CRC error expected %02X %02X but got %02X %02X\n", crc_hi, crc_lo,
+             response[n_rd - 2], response[n_rd - 1]);
 
       return std::nullopt;
     }
@@ -147,17 +150,10 @@ int main(void) {
       return std::nullopt;
     }
 
-    union {
-      int v;
-      unsigned char bytes[4];
-    } u;
+    let int_part = response[3] << 8 | response[4];
+    let dec_part = response[5] << 8 | response[6];
 
-    u.bytes[0] = response[4];
-    u.bytes[1] = response[3];
-    u.bytes[2] = response[6];
-    u.bytes[3] = response[5];
-
-    return u.v / 10000.0;
+    return int_part + dec_part / 10000.0;
   };
 
   int i = 0;
